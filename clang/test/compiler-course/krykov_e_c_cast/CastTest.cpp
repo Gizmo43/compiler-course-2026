@@ -12,13 +12,17 @@ void primitive_tests() {
   // CHECK: double b = static_cast<double>(a);
   double b = (double)a;
 
-  // CHECK: int *p = reinterpret_cast<int *>(a);
-  int *p = (int *)a;
+
 
   const int c = 10;
 
   // CHECK: int *q = const_cast<int *>(&c);
   int *q = (int *)&c;
+
+  // CHECK: int *p = reinterpret_cast<int *>(a);
+  int *p = (int *)a;
+
+  
 }
 
 

@@ -20,9 +20,9 @@ public:
 
     SourceManager &SM = Context->getSourceManager();
 
-
-    if (SM.isInSystemHeader(Node->getBeginLoc()))
+    if (SM.isInSystemHeader(Node->getBeginLoc())) {
       return true;
+    }
 
     const Expr *SubExpr = Node->getSubExpr();
 
@@ -34,9 +34,8 @@ public:
     SourceRange ParenRange(Node->getLParenLoc(), Node->getRParenLoc());
     RW.ReplaceText(ParenRange, Replacement);
 
-    SourceLocation EndLoc =
-        Lexer::getLocForEndOfToken(SubExpr->getEndLoc(), 0, SM,
-                                   Context->getLangOpts());
+    SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+        SubExpr->getEndLoc(), 0, SM, Context->getLangOpts());
 
     RW.InsertTextAfterToken(EndLoc, ")");
 
@@ -48,21 +47,16 @@ private:
 
     CastKind Kind = Node->getCastKind();
 
-
-    if (Kind == CK_BitCast ||
-        Kind == CK_LValueBitCast ||
-        Kind == CK_PointerToIntegral ||
-        Kind == CK_IntegralToPointer)
+    if (Kind == CK_BitCast || Kind == CK_LValueBitCast ||
+        Kind == CK_PointerToIntegral || Kind == CK_IntegralToPointer)
       return "reinterpret_cast";
 
     QualType SrcType = SubExpr->getType();
     QualType DstType = Node->getType();
 
-
     if (SrcType.isConstQualified() != DstType.isConstQualified() ||
         SrcType.isVolatileQualified() != DstType.isVolatileQualified())
       return "const_cast";
-
 
     return "static_cast";
   }
@@ -73,8 +67,7 @@ private:
 
 class CStyleCastConsumer : public ASTConsumer {
 public:
-  CStyleCastConsumer(ASTContext *Ctx, clang::Rewriter &R)
-      : Visitor(Ctx, R) {}
+  CStyleCastConsumer(ASTContext *Ctx, clang::Rewriter &R) : Visitor(Ctx, R) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
     Visitor.TraverseDecl(Ctx.getTranslationUnitDecl());
@@ -86,8 +79,8 @@ private:
 
 class CStyleCastAction : public clang::PluginASTAction {
 public:
-  std::unique_ptr<ASTConsumer>
-  CreateASTConsumer(CompilerInstance &CI, llvm::StringRef) override {
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 llvm::StringRef) override {
 
     RewriterInstance.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
 
