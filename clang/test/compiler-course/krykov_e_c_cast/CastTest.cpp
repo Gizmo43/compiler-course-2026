@@ -1,5 +1,5 @@
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -load %llvmshlibdir/krykov_e_c_cast_ClangAST%pluginext -plugin replace_c_cast %t/test.cpp 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -load %llvmshlibdir/krykov_e_c_cast_ClangAST%pluginext -plugin replace_c_cast %t/CastTest.cpp 2>&1 | FileCheck %s
 
 // CHECK-LABEL: void primitive_tests() {
 // CHECK-NEXT:   int a = 5;
@@ -20,7 +20,7 @@
 // CHECK-NEXT:   Vec2 *mutable_v = const_cast<Vec2 *>(&const_v);
 // CHECK-NEXT: }
 
-//--- test.cpp
+//--- CastTest.cpp
 void primitive_tests() {
   int a = 5;
   double b = (double)a;
