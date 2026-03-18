@@ -13,11 +13,9 @@ namespace {
 
 class CStyleCastVisitor : public RecursiveASTVisitor<CStyleCastVisitor> {
 public:
-  CStyleCastVisitor(ASTContext *Ctx, clang::Rewriter &R)
-      : Context(Ctx), RW(R) {}
+  CStyleCastVisitor(ASTContext *Ctx, Rewriter &R) : Context(Ctx), RW(R) {}
 
   bool VisitCStyleCastExpr(CStyleCastExpr *Node) {
-
     SourceManager &SM = Context->getSourceManager();
 
     if (SM.isInSystemHeader(Node->getBeginLoc())) {
@@ -25,10 +23,8 @@ public:
     }
 
     const Expr *SubExpr = Node->getSubExpr();
-
     std::string CastName = determineCastKind(Node, SubExpr);
     std::string DestType = Node->getTypeAsWritten().getAsString();
-
     std::string Replacement = CastName + "<" + DestType + ">(";
 
     SourceRange ParenRange(Node->getLParenLoc(), Node->getRParenLoc());
@@ -44,7 +40,6 @@ public:
 
 private:
   std::string determineCastKind(CStyleCastExpr *Node, const Expr *SubExpr) {
-
     CastKind Kind = Node->getCastKind();
 
     if (Kind == CK_BitCast || Kind == CK_LValueBitCast ||
@@ -62,12 +57,12 @@ private:
   }
 
   ASTContext *Context;
-  clang::Rewriter &RW;
+  Rewriter &RW;
 };
 
 class CStyleCastConsumer : public ASTConsumer {
 public:
-  CStyleCastConsumer(ASTContext *Ctx, clang::Rewriter &R) : Visitor(Ctx, R) {}
+  CStyleCastConsumer(ASTContext *Ctx, Rewriter &R) : Visitor(Ctx, R) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
     Visitor.TraverseDecl(Ctx.getTranslationUnitDecl());
@@ -77,7 +72,7 @@ private:
   CStyleCastVisitor Visitor;
 };
 
-class CStyleCastAction : public clang::PluginASTAction {
+class CStyleCastAction : public PluginASTAction {
 public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) override {
@@ -94,17 +89,15 @@ public:
   }
 
   void EndSourceFileAction() override {
-
     SourceManager &SM = RewriterInstance.getSourceMgr();
-
     RewriterInstance.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
 
 private:
-  clang::Rewriter RewriterInstance;
+  Rewriter RewriterInstance;
 };
 
 } // namespace
 
-static clang::FrontendPluginRegistry::Add<CStyleCastAction>
+static FrontendPluginRegistry::Add<CStyleCastAction>
     X("replace_c_cast", "Replace C-style casts with C++ casts");
