@@ -30,9 +30,7 @@ public:
     SourceRange ParenRange(Node->getLParenLoc(), Node->getRParenLoc());
     RW.ReplaceText(ParenRange, Replacement);
 
-    SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-        SubExpr->getEndLoc(), 0, SM, Context->getLangOpts());
-
+    SourceLocation EndLoc = SubExpr->getEndLoc();
     RW.InsertTextAfterToken(EndLoc, ")");
 
     return true;
