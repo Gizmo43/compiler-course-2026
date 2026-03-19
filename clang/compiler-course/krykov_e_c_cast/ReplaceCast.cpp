@@ -18,20 +18,26 @@ public:
   bool VisitCStyleCastExpr(CStyleCastExpr *Node) {
     SourceManager &SM = Context->getSourceManager();
 
-    if (SM.isInSystemHeader(Node->getBeginLoc())) {
+    if (SM.isInSystemHeader(Node->getBeginLoc()))
       return true;
-    }
 
     const Expr *SubExpr = Node->getSubExpr();
+
     std::string CastName = determineCastKind(Node, SubExpr);
     std::string DestType = Node->getTypeAsWritten().getAsString();
-    std::string Replacement = CastName + "<" + DestType + ">(";
 
-    SourceRange ParenRange(Node->getLParenLoc(), Node->getRParenLoc());
-    RW.ReplaceText(ParenRange, Replacement);
+    CharSourceRange ExprRange =
+        CharSourceRange::getTokenRange(SubExpr->getSourceRange());
 
-    SourceLocation EndLoc = SubExpr->getEndLoc();
-    RW.InsertTextAfterToken(EndLoc, ")");
+    std::string ExprText =
+        Lexer::getSourceText(ExprRange, SM, Context->getLangOpts()).str();
+
+    std::string Replacement = CastName + "<" + DestType + ">(" + ExprText + ")";
+
+    CharSourceRange FullRange =
+        CharSourceRange::getTokenRange(Node->getSourceRange());
+
+    RW.ReplaceText(FullRange, Replacement);
 
     return true;
   }
@@ -40,16 +46,24 @@ private:
   std::string determineCastKind(CStyleCastExpr *Node, const Expr *SubExpr) {
     CastKind Kind = Node->getCastKind();
 
-    if (Kind == CK_BitCast || Kind == CK_LValueBitCast ||
-        Kind == CK_PointerToIntegral || Kind == CK_IntegralToPointer)
-      return "reinterpret_cast";
-
     QualType SrcType = SubExpr->getType();
     QualType DstType = Node->getType();
 
-    if (SrcType.isConstQualified() != DstType.isConstQualified() ||
-        SrcType.isVolatileQualified() != DstType.isVolatileQualified())
-      return "const_cast";
+    if (SrcType->isPointerType() && DstType->isPointerType()) {
+      QualType SrcPointee = SrcType->getPointeeType();
+      QualType DstPointee = DstType->getPointeeType();
+
+      if (SrcPointee.isConstQualified() != DstPointee.isConstQualified() ||
+          SrcPointee.isVolatileQualified() !=
+              DstPointee.isVolatileQualified()) {
+        return "const_cast";
+      }
+    }
+
+    if (Kind == CK_BitCast || Kind == CK_LValueBitCast ||
+        Kind == CK_PointerToIntegral || Kind == CK_IntegralToPointer) {
+      return "reinterpret_cast";
+    }
 
     return "static_cast";
   }

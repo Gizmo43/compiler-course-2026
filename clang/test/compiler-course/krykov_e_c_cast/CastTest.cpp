@@ -51,13 +51,10 @@ public:
 void user_type_tests() {
   Vec2 v{1,2};
   RawBlock *block = (RawBlock *)&v;
-
   Child child;
   Parent *p = (Parent *)&child;
-
   Parent *base = new Child();
   Child *c = (Child *)base;
-
   const Vec2 const_v{0,0};
   Vec2 *mutable_v = (Vec2 *)&const_v;
 }
