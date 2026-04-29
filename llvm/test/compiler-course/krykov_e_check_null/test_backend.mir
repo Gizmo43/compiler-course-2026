@@ -43,11 +43,13 @@ body: |
     liveins: $rdi
 
     ; CHECK: TEST64rr $rdi, $rdi
-    ; CHECK-NEXT: JCC_1
-    ; CHECK: MOV32rm
+    ; CHECK-NEXT: JCC_1 %bb.{{[0-9]+}}, 4
+    ; CHECK-NEXT: JMP_1 %bb.{{[0-9]+}}
+    ; CHECK:      RET64
+    ; CHECK:      bb.{{[0-9]+}}:
+    ; CHECK:      MOV32rm
+    ; CHECK:      RET64
     %1:gr32 = MOV32rm renamable $rdi, 1, $noreg, 0, $noreg
-
-    ; CHECK: RET64
     RET64 %1
 
 ...
@@ -73,12 +75,15 @@ body: |
   bb.0:
     liveins: $rdi, $esi
 
-    ; CHECK: TEST64rr $rdi, $rdi
-    ; CHECK-NEXT: JCC_1
-    ; CHECK: MOV32mr
+    ; CHECK:      TEST64rr $rdi, $rdi
+    ; CHECK-NEXT: JCC_1 %bb.{{[0-9]+}}, 4
+    ; CHECK-NEXT: JMP_1 %bb.{{[0-9]+}}
+    ; CHECK:      bb.{{[0-9]+}}:
+    ; CHECK:      RET64
+    ; CHECK:      bb.{{[0-9]+}}:
+    ; CHECK:      MOV32mr
+    ; CHECK:      RET64
     MOV32mr renamable $rdi, 1, $noreg, 0, $noreg, renamable $esi
-
-    ; CHECK: RET64
     RET64
 
 ...
@@ -102,12 +107,15 @@ body: |
   bb.0:
     liveins: $rsi
 
-    ; CHECK: TEST64rr $rsi, $rsi
-    ; CHECK-NEXT: JCC_1
-    ; CHECK: MOV32rm
+    ; CHECK:      TEST64rr $rsi, $rsi
+    ; CHECK-NEXT: JCC_1 %bb.{{[0-9]+}}, 4
+    ; CHECK-NEXT: JMP_1 %bb.{{[0-9]+}}
+    ; CHECK:      bb.{{[0-9]+}}:
+    ; CHECK:      RET64
+    ; CHECK:      bb.{{[0-9]+}}:
+    ; CHECK:      MOV32rm
+    ; CHECK:      RET64
     %1:gr32 = MOV32rm renamable $rsi, 1, $noreg, 0, $noreg
-
-    ; CHECK: RET64
     RET64 %1
 
 ...
