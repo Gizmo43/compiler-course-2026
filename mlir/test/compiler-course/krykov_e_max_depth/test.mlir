@@ -14,14 +14,14 @@
 // CHECK: @parallel_branches{{.*}}max_nesting_depth = 2
 
 // depth 0.
-func.func @flat(% arg0 : i32)
-    ->i32{
-      % c1 = arith.constant 1 : i32 % res = arith.addi % arg0,
-      % c1 : i32 return % res : i32
-    }
+func.func @flat(%arg0: i32) -> i32 {
+  %c1 = arith.constant 1 : i32
+  %res = arith.addi %arg0, %c1 : i32
+  return %res : i32
+}
 
 // depth 1
-func.func @one_level(% arg0 : index, % arg1 : index, % arg2 : index) {
+func.func @one_level(%arg0: index, %arg1: index, %arg2: index) {
   scf.for %i = %arg0 to %arg1 step %arg2 {
     %c0 = arith.constant 0 : index
   }
@@ -29,36 +29,37 @@ func.func @one_level(% arg0 : index, % arg1 : index, % arg2 : index) {
 }
 
 // depth 2
-func.func
-    @two_levels(% cond : i1, % arg0 : index, % arg1 : index, % arg2 : index) {
-  scf.if % cond {
+func.func @two_levels(%cond: i1, %arg0: index, %arg1: index, %arg2: index) {
+  scf.if %cond {
     scf.for %i = %arg0 to %arg1 step %arg2 {
-      % c0 = arith.constant 0 : index
+      %c0 = arith.constant 0 : index
     }
   }
   return
 }
 
 // depth 3
-func.func
-    @three_levels(% cond : i1, % arg0 : index, % arg1 : index, % arg2 : index) {
+func.func @three_levels(%cond: i1, %arg0: index, %arg1: index, %arg2: index) {
   scf.for %i = %arg0 to %arg1 step %arg2 {
-    scf.if % cond {
+    scf.if %cond {
       scf.for %j = %arg0 to %arg1 step %arg2 {
-        % c1 = arith.constant 1 : index
+        %c1 = arith.constant 1 : index
       }
     }
   }
   return
 }
 
-func.func @parallel_branches(% cond : i1, % arg0 : index, % arg1 : index,
-                             % arg2 : index) {
+func.func @parallel_branches(%cond: i1, %arg0: index, %arg1: index, %arg2: index) {
   scf.for %i = %arg0 to %arg1 step %arg2 {
-    scf.if % cond { % c0 = arith.constant 0 : index }
+    scf.if %cond {
+      %c0 = arith.constant 0 : index
+    }
   }
   scf.for %j = %arg0 to %arg1 step %arg2 {
-    scf.if % cond { % c1 = arith.constant 1 : index }
+    scf.if %cond {
+      %c1 = arith.constant 1 : index
+    }
   }
   return
 }
