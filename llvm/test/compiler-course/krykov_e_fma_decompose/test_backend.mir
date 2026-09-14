@@ -1,0 +1,98 @@
+# RUN: llc -mtriple x86_64-unknown-linux-gnu --load=%llvmshlibdir/krykov_e_fma_decompose_BACKEND%shlibext \
+# RUN: -run-pass=fma-decompose-x86 %s -o - | FileCheck %s
+
+
+--- |
+  define dso_local double @fma_double(double %a, double %b, double %c) {
+  entry:
+    %mul = fmul double %a, %b
+    %add = fadd double %mul, %c
+    ret double %add
+  }
+
+  define dso_local float @fma_float(float %a, float %b, float %c) {
+  entry:
+    %mul = fmul float %a, %b
+    %add = fadd float %mul, %c
+    ret float %add
+  }
+
+...
+---
+# CHECK: name:            fma_double
+name:            fma_double
+alignment:       16
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+
+registers:
+  - { id: 0, class: fr64 }
+  - { id: 1, class: fr64 }
+  - { id: 2, class: fr64 }
+  - { id: 3, class: fr64 }
+
+liveins:
+  - { reg: '$xmm0', virtual-reg: '%0' }
+  - { reg: '$xmm1', virtual-reg: '%1' }
+  - { reg: '$xmm2', virtual-reg: '%2' }
+
+body: |
+  bb.0.entry:
+    liveins: $xmm0, $xmm1, $xmm2
+
+    %0:fr64 = COPY $xmm0
+    %1:fr64 = COPY $xmm1
+    %2:fr64 = COPY $xmm2
+
+    ; CHECK-NOT: VFMADD213SDr
+    ; CHECK: %4:fr64 = VMULSDrr %0, %1
+    ; CHECK-NEXT: %5:fr64 = VADDSDrr %4, %2
+    ; CHECK: $xmm0 = COPY %5
+    ; CHECK: RET64 $xmm0
+    %3:fr64 = VFMADD213SDr %0, %1, %2, implicit $mxcsr
+    $xmm0 = COPY %3
+    RET64 $xmm0
+
+...
+---
+# CHECK: name:            fma_float
+name:            fma_float
+alignment:       16
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+
+registers:
+  - { id: 0, class: fr32 }
+  - { id: 1, class: fr32 }
+  - { id: 2, class: fr32 }
+  - { id: 3, class: fr32 }
+
+liveins:
+  - { reg: '$xmm0', virtual-reg: '%0' }
+  - { reg: '$xmm1', virtual-reg: '%1' }
+  - { reg: '$xmm2', virtual-reg: '%2' }
+
+body: |
+  bb.0.entry:
+    liveins: $xmm0, $xmm1, $xmm2
+
+    %0:fr32 = COPY $xmm0
+    %1:fr32 = COPY $xmm1
+    %2:fr32 = COPY $xmm2
+
+    ; CHECK-NOT: VFMADD213SSr
+    ; CHECK: %4:fr32 = VMULSSrr %0, %1
+    ; CHECK-NEXT: %5:fr32 = VADDSSrr %4, %2
+    ; CHECK: $xmm0 = COPY %5
+    ; CHECK: RET64
+    %3:fr32 = VFMADD213SSr %0, %1, %2, implicit $mxcsr
+    $xmm0 = COPY %3
+    RET64 implicit $xmm0
+
+...
