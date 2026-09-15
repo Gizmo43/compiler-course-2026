@@ -15,8 +15,10 @@ struct InstrumentFunctionsPass : llvm::PassInfoMixin<InstrumentFunctionsPass> {
     llvm::FunctionType *HookTy =
         llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false);
 
-    llvm::FunctionCallee StartFn = M->getOrInsertFunction("instrument_start", HookTy);
-    llvm::FunctionCallee EndFn = M->getOrInsertFunction("instrument_end", HookTy);
+    llvm::FunctionCallee StartFn =
+        M->getOrInsertFunction("instrument_start", HookTy);
+    llvm::FunctionCallee EndFn =
+        M->getOrInsertFunction("instrument_end", HookTy);
 
     std::vector<llvm::ReturnInst *> returns;
 
