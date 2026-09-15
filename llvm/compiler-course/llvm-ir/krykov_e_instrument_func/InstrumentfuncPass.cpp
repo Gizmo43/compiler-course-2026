@@ -10,6 +10,14 @@ namespace {
 struct InstrumentFunctionsPass : llvm::PassInfoMixin<InstrumentFunctionsPass> {
   llvm::PreservedAnalyses run(llvm::Function &func,
                               llvm::FunctionAnalysisManager &) {
+
+    if (func.isDeclaration())
+      return llvm::PreservedAnalyses::all();
+
+    if (func.getName() == "instrument_start" ||
+        func.getName() == "instrument_end")
+      return llvm::PreservedAnalyses::all();
+
     llvm::Module *M = func.getParent();
     llvm::LLVMContext &Ctx = M->getContext();
     llvm::FunctionType *HookTy =
@@ -20,7 +28,7 @@ struct InstrumentFunctionsPass : llvm::PassInfoMixin<InstrumentFunctionsPass> {
     llvm::FunctionCallee EndFn =
         M->getOrInsertFunction("instrument_end", HookTy);
 
-    std::vector<llvm::ReturnInst *> returns;
+    llvm::SmallVector<llvm::ReturnInst *> returns;
 
     for (llvm::BasicBlock &BB : func) { // find all returns
       if (auto *RI = llvm::dyn_cast<llvm::ReturnInst>(BB.getTerminator())) {
@@ -28,12 +36,14 @@ struct InstrumentFunctionsPass : llvm::PassInfoMixin<InstrumentFunctionsPass> {
       }
     }
 
+    llvm::IRBuilder<> Builder(Ctx);
+
     llvm::BasicBlock &Entry = func.getEntryBlock();
-    llvm::IRBuilder<> Builder(&Entry, Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
     Builder.CreateCall(StartFn);
 
     for (llvm::ReturnInst *RI : returns) {
-      llvm::IRBuilder<> Builder(RI);
+      Builder.SetInsertPoint(RI);
       Builder.CreateCall(EndFn);
     }
 

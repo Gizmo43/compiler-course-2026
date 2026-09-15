@@ -1,28 +1,19 @@
 ; RUN: opt -load-pass-plugin %llvmshlibdir/krykov_e_instrument_func_LLVM_IR%pluginext \
 ; RUN:   -passes=instrument-functions -S %s | FileCheck %s
 
-; CHECK-LABEL: @simple
-; CHECK: call void @instrument_start()
-; CHECK: %res = add i32 %a, %b
-; CHECK: call void @instrument_end()
-; CHECK: ret i32 %res
-
 define i32 @simple(i32 %a, i32 %b) {
   %res = add i32 %a, %b
   ret i32 %res
 }
 
-; CHECK-LABEL: @branch
-; CHECK: call void @instrument_start()
-; CHECK: br i1 %cond, label %then, label %else
-; CHECK: then:
-; CHECK: call void @instrument_end()
-; CHECK: ret i32 1
-; CHECK: else:
-; CHECK: call void @instrument_end()
-; CHECK: ret i32 0
+; CHECK-LABEL: define i32 @simple(i32 %a, i32 %b) {
+; CHECK-NEXT: call void @instrument_start()
+; CHECK-NEXT: %res = add i32 %a, %b
+; CHECK-NEXT: call void @instrument_end()
+; CHECK-NEXT: ret i32 %res
+; CHECK-NEXT: }
 
-define i32 @branch(i1 %cond) {
+define i32 @branchy(i1 %cond) {
 entry:
   br i1 %cond, label %then, label %else
 then:
@@ -31,16 +22,18 @@ else:
   ret i32 0
 }
 
-; CHECK-LABEL: @loop
-; CHECK: call void @instrument_start()
-; CHECK: loop:
-; CHECK: %cond = icmp ult i32 %next, %n
-; CHECK: br i1 %cond, label %loop, label %exit
-; CHECK: exit:
-; CHECK: call void @instrument_end()
-; CHECK: ret i32 %i
+; CHECK-LABEL: define i32 @branchy(i1 %cond) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @instrument_start()
+; CHECK-NEXT: br i1 %cond, label %then, label %else
+; CHECK: then:
+; CHECK-NEXT: call void @instrument_end()
+; CHECK-NEXT: ret i32 1
+; CHECK: else:
+; CHECK-NEXT: call void @instrument_end()
+; CHECK-NEXT: ret i32 0
 
-define i32 @loop(i32 %n) {
+define i32 @looped(i32 %n) {
 entry:
   br label %loop
 loop:
@@ -52,14 +45,25 @@ exit:
   ret i32 %i
 }
 
-; CHECK-LABEL: @void
-; CHECK: call void @instrument_start()
-; CHECK: call void @instrument_end()
-; CHECK: ret void
+; CHECK-LABEL: define i32 @looped(i32 %n) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @instrument_start()
+; CHECK-NEXT: br label %loop
+; CHECK: loop:
+; CHECK-NEXT: %i = phi i32 [ 0, %entry ], [ %next, %loop ]
+; CHECK-NEXT: %next = add i32 %i, 1
+; CHECK-NEXT: %cond = icmp ult i32 %next, %n
+; CHECK-NEXT: br i1 %cond, label %loop, label %exit
+; CHECK: exit:
+; CHECK-NEXT: call void @instrument_end()
+; CHECK-NEXT: ret i32 %i
 
-define void @void() {
+define void @returns_void() {
   ret void
 }
 
-declare void @instrument_start()
-declare void @instrument_end()
+; CHECK-LABEL: define void @returns_void() {
+; CHECK-NEXT: call void @instrument_start()
+; CHECK-NEXT: call void @instrument_end()
+; CHECK-NEXT: ret void
+; CHECK-NEXT: }
