@@ -26,7 +26,7 @@ bool FmaDecomposePass::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Changed = false;
 
-  std::vector<MachineInstr *> toReplace;
+  llvm::SmallVector<MachineInstr *> toReplace;
   for (auto &MBB : MF) { // find all FMA instructions
     for (auto &MI : MBB) {
       unsigned Op = MI.getOpcode();

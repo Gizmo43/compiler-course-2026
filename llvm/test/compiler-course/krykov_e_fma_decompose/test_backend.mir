@@ -17,6 +17,15 @@
     ret float %add
   }
 
+  define dso_local double @fma_chain_double(double %a, double %b, double %c, double %d) {
+  entry:
+    %mul1 = fmul double %a, %b
+    %add1 = fadd double %mul1, %c
+    %mul2 = fmul double %add1, %d
+    %add2 = fadd double %mul2, %c
+    ret double %add2
+  }
+
 ...
 ---
 # CHECK: name:            fma_double
@@ -94,5 +103,54 @@ body: |
     %3:fr32 = VFMADD213SSr %0, %1, %2, implicit $mxcsr
     $xmm0 = COPY %3
     RET64 implicit $xmm0
+
+...
+---
+# CHECK: name:            fma_chain_double
+name:            fma_chain_double
+alignment:       16
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+
+registers:
+  - { id: 0, class: fr64 }
+  - { id: 1, class: fr64 }
+  - { id: 2, class: fr64 }
+  - { id: 3, class: fr64 }
+  - { id: 4, class: fr64 }
+  - { id: 5, class: fr64 }
+
+liveins:
+  - { reg: '$xmm0', virtual-reg: '%0' }
+  - { reg: '$xmm1', virtual-reg: '%1' }
+  - { reg: '$xmm2', virtual-reg: '%2' }
+  - { reg: '$xmm3', virtual-reg: '%3' }
+
+body: |
+  bb.0.entry:
+    liveins: $xmm0, $xmm1, $xmm2, $xmm3
+
+    %0:fr64 = COPY $xmm0
+    %1:fr64 = COPY $xmm1
+    %2:fr64 = COPY $xmm2
+    %3:fr64 = COPY $xmm3
+
+    ; %4 = %0 * %1 + %2
+    ; %5 = %4 * %3 + %2  
+    ;
+    ; CHECK-NOT: VFMADD213SDr
+    ; CHECK: %6:fr64 = VMULSDrr %0, %1
+    ; CHECK-NEXT: %7:fr64 = VADDSDrr %6, %2
+    ; CHECK-NEXT: %8:fr64 = VMULSDrr %7, %3
+    ; CHECK-NEXT: %9:fr64 = VADDSDrr %8, %2
+    ; CHECK: $xmm0 = COPY %9
+    ; CHECK: RET64 $xmm0
+    %4:fr64 = VFMADD213SDr %0, %1, %2, implicit $mxcsr
+    %5:fr64 = VFMADD213SDr %4, %3, %2, implicit $mxcsr
+    $xmm0 = COPY %5
+    RET64 $xmm0
 
 ...
